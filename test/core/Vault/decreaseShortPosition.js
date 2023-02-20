@@ -817,4 +817,257 @@ describe("Vault.decreaseShortPosition", function () {
     expect(await vault.poolAmounts(dai.address)).eq("100860000000000000000"); // 100.86
     expect(await dai.balanceOf(user2.address)).eq("8940000000000000000"); // 8.94 -> 8.92 if no dynamic fee
   });
+
+  it("decreasePosition short with zero fee", async () => {
+    await vault.setFees(
+      50, // _taxBasisPoints
+      10, // _stableTaxBasisPoints
+      4, // _mintBurnFeeBasisPoints
+      30, // _swapFeeBasisPoints
+      4, // _stableSwapFeeBasisPoints
+      10, // _marginFeeBasisPoints
+      toUsd(5), // _liquidationFeeUsd
+      0, // _minProfitTime
+      false // _hasDynamicFees
+    );
+    await vaultUtils.setUseDynamicPositionFee(true);
+    await vaultUtils.setDynamicFeePositionRate(
+      10,
+      10,
+      10,
+      5000,
+      10,
+      2,
+      0,
+      7800
+    );
+    await expect(
+      vaultUtils.addZeroPositionFee(user0.address, 30 * 24 * 60 * 60 + 1)
+    ).to.be.revertedWith("VaultUtils: max zero fee interval exceeded");
+    await vaultUtils.addZeroPositionFee(user0.address, 30 * 24 * 60 * 60);
+    expect(await vaultUtils.zeroPositionFee(user0.address)).eq(
+      (await getBlockTime(provider)) + 30 * 24 * 60 * 60
+    );
+    await vaultUtils.deleteZeroPositionFee(user0.address);
+    expect(await vaultUtils.zeroPositionFee(user0.address)).eq(0);
+    await vaultUtils.addZeroPositionFee(user0.address, 24 * 60 * 60);
+
+    await bnbPriceFeed.setLatestAnswer(toChainlinkPrice(300));
+    await vault.setTokenConfig(...getBnbConfig(bnb, bnbPriceFeed));
+
+    await daiPriceFeed.setLatestAnswer(toChainlinkPrice(1));
+    await vault.setTokenConfig(...getDaiConfig(dai, daiPriceFeed));
+
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(60000));
+    await vault.setTokenConfig(...getBtcConfig(btc, btcPriceFeed));
+
+    await dai.mint(user0.address, expandDecimals(1000, 18));
+    await dai.connect(user0).transfer(vault.address, expandDecimals(100, 18));
+    await vault.buyUSDG(dai.address, user1.address);
+
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(40000));
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(41000));
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(40000));
+
+    expect(await klpManager.getAumInUsdg(false)).eq("99960000000000000000"); // 99.96
+    expect(await klpManager.getAumInUsdg(true)).eq("99960000000000000000"); // 99.96
+
+    await dai.connect(user0).transfer(vault.address, expandDecimals(10, 18));
+    await vault
+      .connect(user0)
+      .increasePosition(
+        user0.address,
+        dai.address,
+        btc.address,
+        toUsd(90),
+        false
+      );
+
+    expect(await klpManager.getAumInUsdg(false)).eq("99960000000000000000"); // 99.96
+    expect(await klpManager.getAumInUsdg(true)).eq("102210000000000000000"); // 102.21
+
+    let position = await vault.getPosition(
+      user0.address,
+      dai.address,
+      btc.address,
+      false
+    );
+    expect(position[0]).eq(toUsd(90)); // size
+    expect(position[1]).eq(toUsd(10)); // zero fee
+    expect(position[2]).eq(toNormalizedPrice(40000)); // averagePrice
+    expect(position[3]).eq(0); // entryFundingRate
+    expect(position[4]).eq(expandDecimals(90, 18)); // reserveAmount
+    expect(position[5]).eq(0); // pnl
+    expect(position[6]).eq(true); // hasRealisedProfit
+  });
+
+  it("decreasePosition short with zero fee for long time", async () => {
+    await vault.setFees(
+      50, // _taxBasisPoints
+      10, // _stableTaxBasisPoints
+      4, // _mintBurnFeeBasisPoints
+      30, // _swapFeeBasisPoints
+      4, // _stableSwapFeeBasisPoints
+      10, // _marginFeeBasisPoints
+      toUsd(5), // _liquidationFeeUsd
+      0, // _minProfitTime
+      false // _hasDynamicFees
+    );
+    await vaultUtils.setUseDynamicPositionFee(true);
+    await vaultUtils.setDynamicFeePositionRate(
+      10,
+      10,
+      10,
+      5000,
+      10,
+      2,
+      0,
+      7800
+    );
+    await vaultUtils.addZeroPositionFee(user0.address, 60 * 60);
+    expect(await vaultUtils.zeroPositionFee(user0.address)).eq(
+      (await getBlockTime(provider)) + 3600
+    );
+    await vaultUtils.deleteZeroPositionFee(user0.address);
+    expect(await vaultUtils.zeroPositionFee(user0.address)).eq(0);
+    await vaultUtils.addZeroPositionFee(user0.address, 24 * 60 * 60);
+
+    await increaseTime(provider, 60 * 50 * 22);
+    await mineBlock(provider);
+
+    await bnbPriceFeed.setLatestAnswer(toChainlinkPrice(300));
+    await vault.setTokenConfig(...getBnbConfig(bnb, bnbPriceFeed));
+
+    await daiPriceFeed.setLatestAnswer(toChainlinkPrice(1));
+    await vault.setTokenConfig(...getDaiConfig(dai, daiPriceFeed));
+
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(60000));
+    await vault.setTokenConfig(...getBtcConfig(btc, btcPriceFeed));
+
+    await dai.mint(user0.address, expandDecimals(1000, 18));
+    await dai.connect(user0).transfer(vault.address, expandDecimals(100, 18));
+    await vault.buyUSDG(dai.address, user1.address);
+
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(40000));
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(41000));
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(40000));
+
+    expect(await klpManager.getAumInUsdg(false)).eq("99960000000000000000"); // 99.96
+    expect(await klpManager.getAumInUsdg(true)).eq("99960000000000000000"); // 99.96
+
+    await dai.connect(user0).transfer(vault.address, expandDecimals(10, 18));
+    await vault
+      .connect(user0)
+      .increasePosition(
+        user0.address,
+        dai.address,
+        btc.address,
+        toUsd(90),
+        false
+      );
+
+    expect(await klpManager.getAumInUsdg(false)).eq("99960000000000000000"); // 99.96
+    expect(await klpManager.getAumInUsdg(true)).eq("102210000000000000000"); // 102.21
+
+    let position = await vault.getPosition(
+      user0.address,
+      dai.address,
+      btc.address,
+      false
+    );
+    expect(position[0]).eq(toUsd(90)); // size
+    expect(position[1]).eq(toUsd(10)); // zero fee
+    expect(position[2]).eq(toNormalizedPrice(40000)); // averagePrice
+    expect(position[3]).eq(0); // entryFundingRate
+    expect(position[4]).eq(expandDecimals(90, 18)); // reserveAmount
+    expect(position[5]).eq(0); // pnl
+    expect(position[6]).eq(true); // hasRealisedProfit
+  });
+
+  it("decreasePosition short with zero fee when expire", async () => {
+    await vault.setFees(
+      50, // _taxBasisPoints
+      10, // _stableTaxBasisPoints
+      4, // _mintBurnFeeBasisPoints
+      30, // _swapFeeBasisPoints
+      4, // _stableSwapFeeBasisPoints
+      10, // _marginFeeBasisPoints
+      toUsd(5), // _liquidationFeeUsd
+      0, // _minProfitTime
+      false // _hasDynamicFees
+    );
+    await vaultUtils.setUseDynamicPositionFee(true);
+    await vaultUtils.setDynamicFeePositionRate(
+      10,
+      10,
+      10,
+      5000,
+      10,
+      2,
+      0,
+      7800
+    );
+    await vaultUtils.addZeroPositionFee(user0.address, 60 * 60);
+    expect(await vaultUtils.zeroPositionFee(user0.address)).eq(
+      (await getBlockTime(provider)) + 3600
+    );
+    await vaultUtils.deleteZeroPositionFee(user0.address);
+    expect(await vaultUtils.zeroPositionFee(user0.address)).eq(0);
+    await vaultUtils.addZeroPositionFee(user0.address, 24 * 60 * 60);
+
+    await mineBlock(provider);
+    await increaseTime(provider, 60 * 60 * 26);
+    await mineBlock(provider);
+    expect(await vaultUtils.zeroPositionFee(user0.address)).lt(
+      await getBlockTime(provider)
+    );
+
+    await bnbPriceFeed.setLatestAnswer(toChainlinkPrice(300));
+    await vault.setTokenConfig(...getBnbConfig(bnb, bnbPriceFeed));
+
+    await daiPriceFeed.setLatestAnswer(toChainlinkPrice(1));
+    await vault.setTokenConfig(...getDaiConfig(dai, daiPriceFeed));
+
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(60000));
+    await vault.setTokenConfig(...getBtcConfig(btc, btcPriceFeed));
+
+    await dai.mint(user0.address, expandDecimals(1000, 18));
+    await dai.connect(user0).transfer(vault.address, expandDecimals(100, 18));
+    await vault.buyUSDG(dai.address, user1.address);
+
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(40000));
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(41000));
+    await btcPriceFeed.setLatestAnswer(toChainlinkPrice(40000));
+
+    expect(await klpManager.getAumInUsdg(false)).eq("99960000000000000000"); // 99.96
+    expect(await klpManager.getAumInUsdg(true)).eq("99960000000000000000"); // 99.96
+
+    await dai.connect(user0).transfer(vault.address, expandDecimals(10, 18));
+    await vault
+      .connect(user0)
+      .increasePosition(
+        user0.address,
+        dai.address,
+        btc.address,
+        toUsd(90),
+        false
+      );
+
+    expect(await klpManager.getAumInUsdg(false)).eq("99960000000000000000"); // 99.96
+    expect(await klpManager.getAumInUsdg(true)).eq("102210000000000000000"); // 102.21
+
+    let position = await vault.getPosition(
+      user0.address,
+      dai.address,
+      btc.address,
+      false
+    );
+    expect(position[0]).eq(toUsd(90)); // size
+    expect(position[1]).eq(toUsd(9.91)); // not zero fee because more than 24 hours
+    expect(position[2]).eq(toNormalizedPrice(40000)); // averagePrice
+    expect(position[3]).eq(0); // entryFundingRate
+    expect(position[4]).eq(expandDecimals(90, 18)); // reserveAmount
+    expect(position[5]).eq(0); // pnl
+    expect(position[6]).eq(true); // hasRealisedProfit
+  });
 });

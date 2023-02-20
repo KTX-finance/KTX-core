@@ -29,6 +29,7 @@ contract VaultUtils is IVaultUtils, Governable {
     uint256 public constant FUNDING_RATE_PRECISION = 1000000000;
     uint256 public constant POSITION_RATE_X_AXIS_PRECISION = 10000;
     uint256 public constant MAX_FEE_BASIS_POINTS = 500; // 5%
+    uint256 public constant MAX_ZERO_FEE_INTERVAL = 30 days;
 
     uint256 public positionRateIncreaseR0 = 0; // 0%
     uint256 public positionRateIncreaseR1 = 5; // 0.05%
@@ -40,9 +41,31 @@ contract VaultUtils is IVaultUtils, Governable {
     uint256 public positionRateDecreaseX1 = 5000; // 50%
     bool public useDynamicPositionFee = false;
 
+    mapping(address => uint256) public zeroPositionFee;
+
+    event AddZeroPositionFee(address account, uint256 interval);
+    event DeleteZeroPositionFee(address account);
+
     constructor(IVault _vault) public {
         admin = msg.sender;
         vault = _vault;
+    }
+
+    function addZeroPositionFee(
+        address _account,
+        uint256 _interval
+    ) external onlyGov {
+        require(
+            _interval <= MAX_ZERO_FEE_INTERVAL,
+            "VaultUtils: max zero fee interval exceeded"
+        );
+        zeroPositionFee[_account] = block.timestamp.add(_interval);
+        emit AddZeroPositionFee(_account, block.timestamp.add(_interval));
+    }
+
+    function deleteZeroPositionFee(address _account) external onlyGov {
+        delete zeroPositionFee[_account];
+        emit DeleteZeroPositionFee(_account);
     }
 
     function setUseDynamicPositionFee(
@@ -321,6 +344,9 @@ contract VaultUtils is IVaultUtils, Governable {
         uint256 _sizeDelta
     ) public view override returns (uint256) {
         if (_sizeDelta == 0) {
+            return 0;
+        }
+        if (zeroPositionFee[_account] > block.timestamp) {
             return 0;
         }
         uint256 marginFeeBasisPoints = useDynamicPositionFee
