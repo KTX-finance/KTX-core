@@ -11,7 +11,6 @@ import "../tokens/interfaces/IUSDG.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IVaultUtils.sol";
 import "./interfaces/IVaultPriceFeed.sol";
-import "hardhat/console.sol";
 
 contract Vault is ReentrancyGuard, IVault {
     using SafeMath for uint256;
@@ -53,7 +52,7 @@ contract Vault is ReentrancyGuard, IVault {
 
     uint256 public override whitelistedTokenCount;
 
-    uint256 public override maxLeverage = 75 * 10000; // 75x
+    uint256 public override maxLeverage = 100 * 10000; // 100x
 
     uint256 public override liquidationFeeUsd;
     uint256 public override taxBasisPoints = 50; // 0.5%

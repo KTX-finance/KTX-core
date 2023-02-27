@@ -7,7 +7,6 @@ import "../libraries/token/IERC20.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IVaultUtils.sol";
 import "../access/Governable.sol";
-import "hardhat/console.sol";
 
 contract VaultUtils is IVaultUtils, Governable {
     using SafeMath for uint256;
