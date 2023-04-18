@@ -1577,7 +1577,7 @@ contract Vault is ReentrancyGuard, IVault {
         bool _isLong,
         bool _isIncrease,
         uint256 _sizeDelta
-    ) public view returns (uint256) {
+    ) public view override returns (uint256) {
         return
             vaultUtils.getPositionFee(
                 _account,

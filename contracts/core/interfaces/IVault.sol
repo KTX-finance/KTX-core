@@ -257,6 +257,15 @@ interface IVault {
         uint256 _lastIncreasedTime
     ) external view returns (bool, uint256);
 
+    function getPositionFee(
+        address _account,
+        address _collateralToken,
+        address _indexToken,
+        bool _isLong,
+        bool _isIncrease,
+        uint256 _sizeDelta
+    ) external view returns (uint256);
+
     function getPosition(
         address _account,
         address _collateralToken,

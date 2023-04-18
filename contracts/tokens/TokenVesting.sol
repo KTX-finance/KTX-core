@@ -8,7 +8,6 @@ import "../libraries/token/IERC20.sol";
 import "../libraries/token/SafeERC20.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
 import "../access/Governable.sol";
-import "hardhat/console.sol";
 
 /**
  * @title TokenVesting
@@ -55,7 +54,7 @@ contract TokenVesting is Governable, ReentrancyGuard {
      * @dev Reverts if no vesting schedule matches the passed identifier.
      */
     modifier onlyIfVestingScheduleExists(bytes32 vestingScheduleId) {
-        require(vestingSchedules[vestingScheduleId].initialized == true);
+        require(vestingSchedules[vestingScheduleId].initialized);
         _;
     }
 
@@ -63,8 +62,8 @@ contract TokenVesting is Governable, ReentrancyGuard {
      * @dev Reverts if the vesting schedule does not exist or has been revoked.
      */
     modifier onlyIfVestingScheduleNotRevoked(bytes32 vestingScheduleId) {
-        require(vestingSchedules[vestingScheduleId].initialized == true);
-        require(vestingSchedules[vestingScheduleId].revoked == false);
+        require(vestingSchedules[vestingScheduleId].initialized);
+        require(!vestingSchedules[vestingScheduleId].revoked);
         _;
     }
 
@@ -194,7 +193,7 @@ contract TokenVesting is Governable, ReentrancyGuard {
         VestingSchedule storage vestingSchedule = vestingSchedules[
             vestingScheduleId
         ];
-        require(vestingSchedule.revocable == true, "tv: not revocable");
+        require(vestingSchedule.revocable, "tv: not revocable");
         uint256 vestedAmount = _computeReleasableAmount(vestingSchedule);
         if (vestedAmount > 0) {
             release(vestingScheduleId, vestedAmount);
@@ -238,11 +237,8 @@ contract TokenVesting is Governable, ReentrancyGuard {
         uint256 vestedAmount = _computeReleasableAmount(vestingSchedule);
         require(vestedAmount >= amount, "tv: no enough vested");
         vestingSchedule.released = vestingSchedule.released.add(amount);
-        address payable beneficiaryPayable = payable(
-            vestingSchedule.beneficiary
-        );
         vestingSchedulesTotalAmount = vestingSchedulesTotalAmount.sub(amount);
-        token.safeTransfer(beneficiaryPayable, amount);
+        token.safeTransfer(vestingSchedule.beneficiary, amount);
     }
 
     /**
@@ -328,16 +324,6 @@ contract TokenVesting is Governable, ReentrancyGuard {
     ) internal view returns (uint256) {
         uint256 currentTime = getCurrentTime();
 
-        // @dev: for debug purpose only
-        // console.log("currentTime is %s", currentTime);
-        // console.log("vestingSchedule amountTotal is %s", vestingSchedule.amountTotal);
-        // console.log("vestingSchedule beneficiary is %s", vestingSchedule.beneficiary);
-        // console.log("vestingSchedule cliff is %s", vestingSchedule.cliff);
-        // console.log("vestingSchedule duration is %s", vestingSchedule.duration);
-        // console.log("vestingSchedule released is %s", vestingSchedule.released);
-        // console.log("vestingSchedule startTimeAfterLaunch is %s", vestingSchedule.startTimeAfterLaunch);
-        // console.log("vestingSchedule slicePeriodSeconds is %s", vestingSchedule.slicePeriodSeconds);
-
         if (
             (currentTime < launchTime) ||
             (currentTime.sub(launchTime) <
@@ -345,7 +331,7 @@ contract TokenVesting is Governable, ReentrancyGuard {
             (currentTime.sub(launchTime).sub(
                 vestingSchedule.startTimeAfterLaunch
             ) < vestingSchedule.cliff) ||
-            vestingSchedule.revoked == true
+            vestingSchedule.revoked
         ) {
             return 0;
         } else if (

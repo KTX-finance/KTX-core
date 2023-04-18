@@ -331,6 +331,27 @@ contract PositionManager is BasePositionManager {
         address _vault = vault;
         address timelock = IVault(_vault).gov();
 
+        (
+            ,
+            ,
+            address collateralToken,
+            address indexToken,
+            ,
+            bool isLong,
+            ,
+            ,
+
+        ) = IOrderBook(orderBook).getIncreaseOrder(_account, _orderIndex);
+
+        uint256 positionFee = IVault(vault).getPositionFee(
+            _account,
+            collateralToken,
+            indexToken,
+            isLong,
+            true,
+            sizeDelta
+        );
+
         ITimelock(timelock).enableLeverage(_vault);
         IOrderBook(orderBook).executeIncreaseOrder(
             _account,
@@ -339,7 +360,7 @@ contract PositionManager is BasePositionManager {
         );
         ITimelock(timelock).disableLeverage(_vault);
 
-        _emitIncreasePositionReferral(_account, sizeDelta);
+        _emitIncreasePositionReferral(_account, sizeDelta, positionFee);
     }
 
     function executeDecreaseOrder(
@@ -351,19 +372,24 @@ contract PositionManager is BasePositionManager {
         address timelock = IVault(_vault).gov();
 
         (
+            address collateralToken,
             ,
-            ,
-            ,
-            // _collateralToken
-            // _collateralDelta
-            // _indexToken
-            uint256 _sizeDelta, // _isLong // triggerPrice // triggerAboveThreshold
-            ,
+            address indexToken,
+            uint256 _sizeDelta,
+            bool isLong, // triggerPrice // triggerAboveThreshold // executionFee
             ,
             ,
 
-        ) = // executionFee
-            IOrderBook(orderBook).getDecreaseOrder(_account, _orderIndex);
+        ) = IOrderBook(orderBook).getDecreaseOrder(_account, _orderIndex);
+
+        uint256 positionFee = IVault(vault).getPositionFee(
+            _account,
+            collateralToken,
+            indexToken,
+            isLong,
+            false,
+            _sizeDelta
+        );
 
         ITimelock(timelock).enableLeverage(_vault);
         IOrderBook(orderBook).executeDecreaseOrder(
@@ -373,7 +399,7 @@ contract PositionManager is BasePositionManager {
         );
         ITimelock(timelock).disableLeverage(_vault);
 
-        _emitDecreasePositionReferral(_account, _sizeDelta);
+        _emitDecreasePositionReferral(_account, _sizeDelta, positionFee);
     }
 
     function _validateIncreaseOrder(
@@ -386,12 +412,11 @@ contract PositionManager is BasePositionManager {
             address _collateralToken,
             address _indexToken,
             uint256 _sizeDelta,
-            bool _isLong, // triggerPrice // triggerAboveThreshold
+            bool _isLong, // triggerPrice // triggerAboveThreshold // executionFee
             ,
             ,
 
-        ) = // executionFee
-            IOrderBook(orderBook).getIncreaseOrder(_account, _orderIndex);
+        ) = IOrderBook(orderBook).getIncreaseOrder(_account, _orderIndex);
 
         if (!shouldValidateIncreaseOrder) {
             return _sizeDelta;
