@@ -35,6 +35,7 @@ contract BasePositionManager is
     address public vault;
     address public router;
     address public weth;
+    address public complexOrderRouter;
 
     // to prevent using the deposit and withdrawal of collateral as a zero fee swap,
     // there is a small depositFee charged if a collateral deposit results in the decrease
@@ -84,6 +85,10 @@ contract BasePositionManager is
         require(msg.sender == admin, "BasePositionManager: forbidden");
         _;
     }
+    modifier onlyComplexOrderRouter() {
+        require(msg.sender == complexOrderRouter, "OrderBook: forbidden");
+        _;
+    }
 
     constructor(
         address _vault,
@@ -100,12 +105,21 @@ contract BasePositionManager is
     }
 
     receive() external payable {
-        require(msg.sender == weth, "BasePositionManager: invalid sender");
+        require(
+            msg.sender == weth || msg.sender == complexOrderRouter,
+            "BasePositionManager: invalid sender"
+        );
     }
 
     function setAdmin(address _admin) external onlyGov {
         admin = _admin;
         emit SetAdmin(_admin);
+    }
+
+    function setComplexOrderRouter(
+        address _complexOrderRouter
+    ) external onlyGov {
+        complexOrderRouter = _complexOrderRouter;
     }
 
     function setDepositFee(uint256 _depositFee) external onlyAdmin {
@@ -366,6 +380,12 @@ contract BasePositionManager is
     function _transferInETH() internal {
         if (msg.value != 0) {
             IWETH(weth).deposit{value: msg.value}();
+        }
+    }
+
+    function _transferInETHValue(uint256 _value) internal {
+        if (_value != 0) {
+            IWETH(weth).deposit{value: _value}();
         }
     }
 
