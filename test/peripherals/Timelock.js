@@ -366,7 +366,7 @@ describe("Timelock", function () {
       timelock.connect(wallet).setMaxLeverage(vault.address, 49 * 10000)
     ).to.be.revertedWith("Timelock: invalid _maxLeverage");
 
-    expect(await vault.maxLeverage()).eq(75 * 10000);
+    expect(await vault.maxLeverage()).eq(100 * 10000);
     await timelock.connect(wallet).setMaxLeverage(vault.address, 100 * 10000);
     expect(await vault.maxLeverage()).eq(100 * 10000);
   });

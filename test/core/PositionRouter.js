@@ -96,6 +96,7 @@ describe("PositionRouter", function () {
       usdg.address,
       bnb.address,
     ]);
+
     positionRouter = await deployContract("PositionRouter", [
       vault.address,
       router.address,
@@ -1127,7 +1128,9 @@ describe("PositionRouter", function () {
     await expect(
       positionRouter
         .connect(user0)
-        .createIncreasePosition(...params.concat([3000, referralCode]))
+        .createIncreasePosition(...params.concat([3000, referralCode]), {
+          value: 3000,
+        })
     ).to.be.revertedWith("PositionRouter: invalid executionFee");
 
     await expect(

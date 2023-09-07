@@ -237,7 +237,7 @@ describe("Vault.settings", function () {
       "Vault: invalid _maxLeverage"
     );
 
-    expect(await vault.maxLeverage()).eq(75 * 10000);
+    expect(await vault.maxLeverage()).eq(100 * 10000);
     await vault.connect(user0).setMaxLeverage(10001);
     expect(await vault.maxLeverage()).eq(10001);
   });
