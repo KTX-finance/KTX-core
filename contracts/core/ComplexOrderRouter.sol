@@ -346,7 +346,7 @@ contract ComplexOrderRouter is ReentrancyGuard, Governable {
             _transferOutETH(_executionFee[1], payable(orderbook));
             IOrderBook(orderbook).createDecreaseOrderComplex(
                 msg.sender,
-                _token[0],
+                _indexToken,
                 _sizeDelta[1],
                 _token[1],
                 0,
@@ -360,7 +360,7 @@ contract ComplexOrderRouter is ReentrancyGuard, Governable {
             _transferOutETH(_executionFee[2], payable(orderbook));
             IOrderBook(orderbook).createDecreaseOrderComplex(
                 msg.sender,
-                _token[0],
+                _indexToken,
                 _sizeDelta[2],
                 _token[2],
                 0,
@@ -444,7 +444,7 @@ contract ComplexOrderRouter is ReentrancyGuard, Governable {
             _transferOutETH(_executionFee[1], payable(orderbook));
             IOrderBook(orderbook).createDecreaseOrderComplex(
                 msg.sender,
-                _token[0],
+                _indexToken,
                 _sizeDelta[1],
                 _token[1],
                 0,
@@ -458,7 +458,7 @@ contract ComplexOrderRouter is ReentrancyGuard, Governable {
             _transferOutETH(_executionFee[2], payable(orderbook));
             IOrderBook(orderbook).createDecreaseOrderComplex(
                 msg.sender,
-                _token[0],
+                _indexToken,
                 _sizeDelta[2],
                 _token[2],
                 0,

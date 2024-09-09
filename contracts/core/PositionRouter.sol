@@ -780,7 +780,10 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
         return request.path;
     }
 
-    function _setTraderReferralCode(address _account, bytes32 _referralCode) internal {
+    function _setTraderReferralCode(
+        address _account,
+        bytes32 _referralCode
+    ) internal {
         if (_referralCode != bytes32(0) && referralStorage != address(0)) {
             IReferralStorage(referralStorage).setTraderReferralCode(
                 _account,

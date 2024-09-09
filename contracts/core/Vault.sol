@@ -236,7 +236,6 @@ contract Vault is ReentrancyGuard, IVault {
         uint256 fundingFee
     );
 
-    event DirectPoolDeposit(address token, uint256 amount);
     event IncreasePoolAmount(address token, uint256 amount);
     event DecreasePoolAmount(address token, uint256 amount);
     event IncreaseUsdgAmount(address token, uint256 amount);
@@ -515,7 +514,6 @@ contract Vault is ReentrancyGuard, IVault {
         uint256 tokenAmount = _transferIn(_token);
         _validate(tokenAmount > 0, 15);
         _increasePoolAmount(_token, tokenAmount);
-        emit DirectPoolDeposit(_token, tokenAmount);
     }
 
     function buyUSDG(
@@ -612,11 +610,12 @@ contract Vault is ReentrancyGuard, IVault {
         return amountOut;
     }
 
-    function swap(
+    function swapCommon(
         address _tokenIn,
         address _tokenOut,
-        address _receiver
-    ) external override nonReentrant returns (uint256) {
+        address _receiver,
+        uint256 _feeDiscount
+    ) private nonReentrant returns (uint256) {
         _validate(isSwapEnabled, 23);
         _validate(whitelistedTokens[_tokenIn], 24);
         _validate(whitelistedTokens[_tokenOut], 25);
@@ -645,6 +644,9 @@ contract Vault is ReentrancyGuard, IVault {
             _tokenOut,
             usdgAmount
         );
+        feeBasisPoints = isManager[msg.sender]
+            ? feeBasisPoints.mul(_feeDiscount).div(100)
+            : feeBasisPoints;
         uint256 amountOutAfterFees = _collectSwapFees(
             _tokenOut,
             amountOut,
@@ -673,6 +675,23 @@ contract Vault is ReentrancyGuard, IVault {
 
         useSwapPricing = false;
         return amountOutAfterFees;
+    }
+
+    function swap(
+        address _tokenIn,
+        address _tokenOut,
+        address _receiver
+    ) external override nonReentrant returns (uint256) {
+        return swapCommon(_tokenIn, _tokenOut, _receiver, 100);
+    }
+
+    function swapWithFeeDiscount(
+        address _tokenIn,
+        address _tokenOut,
+        address _receiver,
+        uint256 _feeDiscount
+    ) external override nonReentrant returns (uint256) {
+        return swapCommon(_tokenIn, _tokenOut, _receiver, _feeDiscount);
     }
 
     function increasePosition(
@@ -1384,16 +1403,6 @@ contract Vault is ReentrancyGuard, IVault {
             );
     }
 
-    function getUtilisation(address _token) public view returns (uint256) {
-        uint256 poolAmount = poolAmounts[_token];
-        if (poolAmount == 0) {
-            return 0;
-        }
-
-        return
-            reservedAmounts[_token].mul(FUNDING_RATE_PRECISION).div(poolAmount);
-    }
-
     function getPositionLeverage(
         address _account,
         address _collateralToken,
@@ -1548,25 +1557,6 @@ contract Vault is ReentrancyGuard, IVault {
                 _collateralToken,
                 _indexToken,
                 _isLong
-            );
-    }
-
-    function getFundingFee(
-        address _account,
-        address _collateralToken,
-        address _indexToken,
-        bool _isLong,
-        uint256 _size,
-        uint256 _entryFundingRate
-    ) public view returns (uint256) {
-        return
-            vaultUtils.getFundingFee(
-                _account,
-                _collateralToken,
-                _indexToken,
-                _isLong,
-                _size,
-                _entryFundingRate
             );
     }
 
@@ -1809,7 +1799,7 @@ contract Vault is ReentrancyGuard, IVault {
             _sizeDelta
         );
 
-        uint256 fundingFee = getFundingFee(
+        uint256 fundingFee = vaultUtils.getFundingFee(
             _account,
             _collateralToken,
             _indexToken,
