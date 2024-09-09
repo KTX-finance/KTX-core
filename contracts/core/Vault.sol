@@ -644,9 +644,7 @@ contract Vault is ReentrancyGuard, IVault {
             _tokenOut,
             usdgAmount
         );
-        feeBasisPoints = isManager[msg.sender]
-            ? feeBasisPoints.mul(_feeDiscount).div(100)
-            : feeBasisPoints;
+        feeBasisPoints = feeBasisPoints.mul(_feeDiscount).div(100);
         uint256 amountOutAfterFees = _collectSwapFees(
             _tokenOut,
             amountOut,
@@ -691,6 +689,7 @@ contract Vault is ReentrancyGuard, IVault {
         address _receiver,
         uint256 _feeDiscount
     ) external override nonReentrant returns (uint256) {
+        _validate(isManager[msg.sender], 54);
         return swapCommon(_tokenIn, _tokenOut, _receiver, _feeDiscount);
     }
 
