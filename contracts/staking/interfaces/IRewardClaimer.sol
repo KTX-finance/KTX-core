@@ -8,6 +8,11 @@ interface IRewardClaimer {
         address _token
     ) external view returns (uint256);
 
+    function accumAmount(
+        address _account,
+        address _token
+    ) external view returns (uint256);
+
     function claimForAccount(
         address _account,
         address _receiver,

@@ -137,6 +137,13 @@ interface IVault {
         address _receiver
     ) external returns (uint256);
 
+    function swapWithFeeDiscount(
+        address _tokenIn,
+        address _tokenOut,
+        address _receiver,
+        uint256 _feeDiscount
+    ) external returns (uint256);
+
     function increasePosition(
         address _account,
         address _collateralToken,

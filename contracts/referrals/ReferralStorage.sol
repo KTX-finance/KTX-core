@@ -19,14 +19,14 @@ contract ReferralStorage is Governable, IReferralStorage {
 
     uint256 public constant BASIS_POINTS = 10000;
 
-    mapping (address => uint256) public referrerDiscountShares; // to override default value in tier
-    mapping (address => uint256) public referrerTiers; // link between user <> tier
-    mapping (uint256 => Tier) public tiers;
+    mapping(address => uint256) public referrerDiscountShares; // to override default value in tier
+    mapping(address => uint256) public referrerTiers; // link between user <> tier
+    mapping(uint256 => Tier) public tiers;
 
-    mapping (address => bool) public isHandler;
+    mapping(address => bool) public isHandler;
 
-    mapping (bytes32 => address) public override codeOwners;
-    mapping (address => bytes32) public traderReferralCodes;
+    mapping(bytes32 => address) public override codeOwners;
+    mapping(address => bytes32) public traderReferralCodes;
 
     event SetHandler(address handler, bool isActive);
     event SetTraderReferralCode(address account, bytes32 code);
@@ -47,9 +47,19 @@ contract ReferralStorage is Governable, IReferralStorage {
         emit SetHandler(_handler, _isActive);
     }
 
-    function setTier(uint256 _tierId, uint256 _totalRebate, uint256 _discountShare) external override onlyGov {
-        require(_totalRebate <= BASIS_POINTS, "ReferralStorage: invalid totalRebate");
-        require(_discountShare <= BASIS_POINTS, "ReferralStorage: invalid discountShare");
+    function setTier(
+        uint256 _tierId,
+        uint256 _totalRebate,
+        uint256 _discountShare
+    ) external override onlyGov {
+        require(
+            _totalRebate <= BASIS_POINTS,
+            "ReferralStorage: invalid totalRebate"
+        );
+        require(
+            _discountShare <= BASIS_POINTS,
+            "ReferralStorage: invalid discountShare"
+        );
 
         Tier memory tier = tiers[_tierId];
         tier.totalRebate = _totalRebate;
@@ -58,19 +68,28 @@ contract ReferralStorage is Governable, IReferralStorage {
         emit SetTier(_tierId, _totalRebate, _discountShare);
     }
 
-    function setReferrerTier(address _referrer, uint256 _tierId) external override onlyGov {
+    function setReferrerTier(
+        address _referrer,
+        uint256 _tierId
+    ) external override onlyGov {
         referrerTiers[_referrer] = _tierId;
         emit SetReferrerTier(_referrer, _tierId);
     }
 
     function setReferrerDiscountShare(uint256 _discountShare) external {
-        require(_discountShare <= BASIS_POINTS, "ReferralStorage: invalid discountShare");
+        require(
+            _discountShare <= BASIS_POINTS,
+            "ReferralStorage: invalid discountShare"
+        );
 
         referrerDiscountShares[msg.sender] = _discountShare;
         emit SetReferrerDiscountShare(msg.sender, _discountShare);
     }
 
-    function setTraderReferralCode(address _account, bytes32 _code) external override onlyHandler {
+    function setTraderReferralCode(
+        address _account,
+        bytes32 _code
+    ) external override onlyHandler {
         _setTraderReferralCode(_account, _code);
     }
 
@@ -80,7 +99,10 @@ contract ReferralStorage is Governable, IReferralStorage {
 
     function registerCode(bytes32 _code) external {
         require(_code != bytes32(0), "ReferralStorage: invalid _code");
-        require(codeOwners[_code] == address(0), "ReferralStorage: code already exists");
+        require(
+            codeOwners[_code] == address(0),
+            "ReferralStorage: code already exists"
+        );
 
         codeOwners[_code] = msg.sender;
         emit RegisterCode(msg.sender, _code);
@@ -96,14 +118,19 @@ contract ReferralStorage is Governable, IReferralStorage {
         emit SetCodeOwner(msg.sender, _newAccount, _code);
     }
 
-    function govSetCodeOwner(bytes32 _code, address _newAccount) external override onlyGov {
+    function govSetCodeOwner(
+        bytes32 _code,
+        address _newAccount
+    ) external override onlyGov {
         require(_code != bytes32(0), "ReferralStorage: invalid _code");
 
         codeOwners[_code] = _newAccount;
         emit GovSetCodeOwner(_code, _newAccount);
     }
 
-    function getTraderReferralInfo(address _account) external override view returns (bytes32, address) {
+    function getTraderReferralInfo(
+        address _account
+    ) external view override returns (bytes32, address) {
         bytes32 code = traderReferralCodes[_account];
         address referrer;
         if (code != bytes32(0)) {
