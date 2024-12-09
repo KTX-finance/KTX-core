@@ -22,7 +22,9 @@ contract RewardClaimer is ReentrancyGuard, IRewardClaimer, Governable {
     mapping(address => bool) public isClaimableToken;
     mapping(address => bool) public isHandler;
     mapping(address => mapping(address => uint256)) public userClaimableAmounts;
+    mapping(address => mapping(address => uint256)) public userAccumAmounts;
     mapping(address => uint256) public totalClaimableAmount;
+    mapping(address => uint256) public accumClaimableAmount;
 
     event Claim(address receiver, address token, uint256 amount);
     event SetExpiryTime(uint256 expiryTime);
@@ -93,6 +95,13 @@ contract RewardClaimer is ReentrancyGuard, IRewardClaimer, Governable {
         return userClaimableAmounts[_account][_token];
     }
 
+    function accumAmount(
+        address _account,
+        address _token
+    ) external view override returns (uint256) {
+        return userAccumAmounts[_account][_token];
+    }
+
     function _claim(
         address _account,
         address _receiver,
@@ -145,6 +154,13 @@ contract RewardClaimer is ReentrancyGuard, IRewardClaimer, Governable {
                 account
             ][_token].add(amount);
 
+            accumClaimableAmount[_token] = accumClaimableAmount[_token].add(
+                amount
+            );
+            userAccumAmounts[account][_token] = userAccumAmounts[account][
+                _token
+            ].add(amount);
+
             emit IncreaseClaimableToken(account, _token, amount);
         }
     }
@@ -171,6 +187,13 @@ contract RewardClaimer is ReentrancyGuard, IRewardClaimer, Governable {
             userClaimableAmounts[account][_token] = userClaimableAmounts[
                 account
             ][_token].sub(amount);
+
+            accumClaimableAmount[_token] = accumClaimableAmount[_token].sub(
+                amount
+            );
+            userAccumAmounts[account][_token] = userAccumAmounts[account][
+                _token
+            ].sub(amount);
 
             emit DecreaseClaimableToken(account, _token, amount);
         }
